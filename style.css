@@ -3,7 +3,7 @@ body {
 }
 
 input {
-    width:  60px;
+    width: 60px;
 }
 
 p {
@@ -11,6 +11,7 @@ p {
 }
 
 .calendar {
+    margin-top: 10px;
     display: flex;
     justify-content: center;
     align-items: center;

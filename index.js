@@ -2,8 +2,17 @@ const FULL_CYCLE = 500;
 const MONTH_IN_YEAR = 12;
 const DAYS_IN_MONTH = 30;
 const DAYS_IN_WEEK = 7;
-const MULTIPLICITY_100 = 100;
-const MULTIPLICITY_5 = 5;
+const IMPLICIT_EXCEPTION = 100;
+const IMPLICIT_YEAR = 5;
+const WEEK_CALENDAR_CHRONOS = [
+    'Saturday',
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+];
 
 /* During the calculations I calculated, that every 500 years day in the week does not shift
 * In every 500 years we have 96 leap years and 404 not leap years
@@ -23,106 +32,110 @@ const MULTIPLICITY_5 = 5;
 */
 
 class ChronosCalendar {
-    constructor(day,month,year) {
+    constructor(day, month, year, target) {
         this.day = day;
         this.month = month;
         this.year = year;
         this.target = target;
     }
 
-    _weekCalendarChronos = [
-        'Saturday',
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-    ];
+    totalDayOfWeek() {
+        if (!this._isValidDate(this.day, this.month, this.year)) return;
 
-    dayOnWeek() {
-        this._validDate(this.day,  this.month, this.year);
-        if(!this.validatorCheck) return;
-
-        const biasYear = this._biasYear(this.year);
-        const biasMonth = this._biasMonth(this.month, this.year);
-        const biasDays = this._biasDay(this.day);
+        const biasYear = this._countDisplaceYears(this.year);
+        const biasMonth = this.month === 1 ? 0 : this._countDisplaceMonths(this.month, this.year);
+        const biasDays = this._countDisplaceDays(this.day);
 
         const totalBias = (biasYear + biasMonth + biasDays) % DAYS_IN_WEEK;
 
-        this.target.innerText = this._weekCalendarChronos[totalBias];
+        this.target.innerText = WEEK_CALENDAR_CHRONOS[totalBias];
     }
 
     _dayOffsetsInYear(isLeap) {
         const dayOffsetsInYearLeap = (DAYS_IN_MONTH * MONTH_IN_YEAR + 1) % DAYS_IN_WEEK;
         const dayOffsetsInYearIsNotLeap = DAYS_IN_MONTH * MONTH_IN_YEAR % DAYS_IN_WEEK;
 
-        if(isLeap) return dayOffsetsInYearLeap;
-            return dayOffsetsInYearIsNotLeap;
+        return isLeap ? dayOffsetsInYearLeap : dayOffsetsInYearIsNotLeap;
     }
 
-    _biasYear(year) {
+    _countDisplaceYears(year) {
         year %= FULL_CYCLE;
-        let yearsPassed;
-        if(year === 1) {
-            return 0;
-        }
 
-        if(year === 0) {
-            yearsPassed = 499
-        } else  yearsPassed = year - 1;
+        let yearsPassed = (year) ? year - 1 : 499;
 
-        const anExceptionYears = Math.floor(yearsPassed / MULTIPLICITY_100);
-        const yearsLeap = Math.floor(yearsPassed / MULTIPLICITY_5) - anExceptionYears;
-        const yearsIsNotLeap = yearsPassed - yearsLeap;
+        const anExceptionYears = Math.floor(yearsPassed / IMPLICIT_EXCEPTION);
+        const yearsLeap = Math.floor(yearsPassed / IMPLICIT_YEAR) - anExceptionYears;
+        const leapYearsQuantity = yearsPassed - yearsLeap;
 
         const totalBiasLeap = yearsLeap * this._dayOffsetsInYear(true) % DAYS_IN_WEEK;
-        const totalBiasIsNotLeap = yearsIsNotLeap * this._dayOffsetsInYear(false) % DAYS_IN_WEEK;
+        const totalBiasIsNotLeap = leapYearsQuantity * this._dayOffsetsInYear(false) % DAYS_IN_WEEK;
 
         const totalBias = (totalBiasLeap + totalBiasIsNotLeap) % DAYS_IN_WEEK;
         return totalBias;
     }
 
-    _biasMonth(month, year) {
-        if(month === 1) return 0;
+    _countDisplaceMonths(month, year) {
         const yearIsLeap = this._isLeap(year);
         let daysPassed;
 
         const anExceptionMonth = month - 1;
 
-        if(yearIsLeap && anExceptionMonth >= 2) {
+        if (yearIsLeap && anExceptionMonth >= 2) {
             daysPassed = DAYS_IN_MONTH * anExceptionMonth + 1
-        } else daysPassed =  DAYS_IN_MONTH * anExceptionMonth;
+        } else daysPassed = DAYS_IN_MONTH * anExceptionMonth;
 
         const totalBias = daysPassed % DAYS_IN_WEEK;
 
         return totalBias;
     }
 
-    _biasDay(days) {
+    _countDisplaceDays(days) {
         return days % DAYS_IN_WEEK;
     }
 
     _isLeap(year) {
-        if(year % FULL_CYCLE === 0) {
-            return true
-        } else if(year % MULTIPLICITY_100 === 0) {
-            return false
-        } else return year % MULTIPLICITY_5 === 0;
+        if (year % 100 === 0 && year % FULL_CYCLE !== 0) return false;
+
+        return year % FULL_CYCLE === 0 || year % IMPLICIT_YEAR === 0;
     }
 
-    _validDate(day, month, year) {
+    _wrongMessage(day, month, year) {
         const isLeap = this._isLeap(year);
+        const errorMessage = {
+            dayMore: 'Day cannot be more than 31',
+            dayLess: 'Day cannot be less than 1',
+            monthMore: 'Month cannot be more than 12',
+            monthLess: 'Month cannot be less than 1',
+            yearLess: 'Year cannot be less than 1',
+            wrongMonthDays: 'This month cannot have 31 day',
+            wrongMonth: '31 days can only be in February'
+        };
 
-        if(day > 31)  return this.target.innerText = 'Day cannot be more than 31';
-        if(day <= 0)  return this.target.innerText = 'Day cannot be less than 1';
-        if(month <= 0)  return this.target.innerText = 'Month cannot be less than 1';
-        if(month > MONTH_IN_YEAR)  return this.target.innerText = 'Month cannot be more than 12';
-        if(year <= 0)  return this.target.innerText = 'Year cannot be less than 1';
-        if(isLeap && day > DAYS_IN_MONTH && month !== 2)  return this.target.innerText = 'This month cannot have 31 day on this Planet';
-        if(!isLeap && day > DAYS_IN_MONTH)  return this.target.innerText = 'This month cannot have 31 day on this Planet';
+        if (day > 31) return errorMessage.dayMore;
 
-        this.validatorCheck = true;
+        if (day <= 0) return errorMessage.dayLess;
+
+        if (month <= 0) return errorMessage.monthLess;
+
+        if (month > MONTH_IN_YEAR) return errorMessage.monthMore;
+
+        if (year <= 0) return errorMessage.yearLess;
+
+        if (!isLeap && day > DAYS_IN_MONTH) return errorMessage.wrongMonthDays;
+
+        if (isLeap && day > DAYS_IN_MONTH && month !== 2) return errorMessage.wrongMonth;
+    }
+
+    _isValidDate(day, month, year) {
+        let message = this._wrongMessage(day, month, year);
+
+        if (message) {
+            this.target.innerText = message;
+
+            return false;
+        }
+
+        return true;
     }
 }
 
@@ -134,6 +147,6 @@ button.addEventListener('click', () => {
     let currentMonth = +document.querySelector('#month').value;
     let currentYear = +document.querySelector('#year').value;
 
-    const dayWeek = new ChronosCalendar(currentDay,currentMonth,currentYear, target);
-    dayWeek.dayOnWeek();
+    const weekDay = new ChronosCalendar(currentDay, currentMonth, currentYear, target);
+    weekDay.totalDayOfWeek();
 });
